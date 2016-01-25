@@ -93,6 +93,8 @@ apache_remove_packages:
   - require:
     - service: apache_service_dead
 
+{%- endif %}
+
 {%- for mpm_type, mpm in server.mpm.iteritems() %}
 
 {%- if mpm.enabled %}
@@ -108,7 +110,7 @@ apache_mpm_{{ mpm_type }}_enable:
 
 apache_mpm_{{ mpm_type }}_config:
   file.managed:
-  - name /etc/apache2/mods-available/mpm_{{ mpm_type }}.conf
+  - name: /etc/apache2/mods-available/mpm_{{ mpm_type }}.conf
   - source: salt://apache/files/mpm/mpm_{{ mpm_type }}.conf
   - template: jinja
   - require:
@@ -127,5 +129,3 @@ apache_mpm_{{ mpm_type }}_disable:
 {%- endif %}
 
 {%- endfor %}
-
-{%- endif %}
