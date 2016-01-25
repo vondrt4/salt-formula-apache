@@ -13,8 +13,7 @@ parameters:
         - 443
         protocol: tcp
       modules:
-      - ssl
-      - rewrite
+      - status
       mpm:
         prefork:
           enabled: true
