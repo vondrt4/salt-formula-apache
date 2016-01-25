@@ -6,7 +6,11 @@ parameters:
       heka:
         enabled: true
       sensu:
-        enabled: false
+        enabled: true
+        threshold_warn_base: ${apache:server:mpm:prefork:max_clients}
+        threshold_warn_divisor: 4
+        threshold_crit_base: ${apache:server:mpm:prefork:max_clients}
+        threshold_crit_divisor: 10
       sphinx:
         enabled: true
       iptables:

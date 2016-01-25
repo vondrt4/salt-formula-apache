@@ -24,3 +24,9 @@ check:
   {%- endif %}
   {%- endif %}
   {%- endfor %}
+  local_apache_open_slots:
+    command: "PATH=$PATH:/srv/sensu/checks check_apachestatus_auto.pl -H 127.0.0.1 -p 80 -w {{ pillar.apache._support.sensu.threshold_warn_base // pillar.apache._support.sensu.threshold_warn_divisor }} -c {{ pillar.apache._support.sensu.threshold_crit_base // pillar.apache._support.sensu.threshold_crit_divisor }}"
+    interval: 60
+    occurrences: 1
+    subscribers:
+    - local-apache-server

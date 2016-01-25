@@ -15,6 +15,7 @@ parameters:
       modules:
       - ssl
       - rewrite
+      - status
       default_mpm: prefork
       mpm:
         prefork:
