@@ -2,6 +2,8 @@
 {%- if server.enabled %}
 
 {%- if server.site is defined %}
+{%- set ssl_certificates = {} %}
+
 {%- for site_name, site in server.site.iteritems() %}
 
 {% if site.enabled %}
@@ -21,7 +23,28 @@
   - watch_in:
     - service: apache_service
 
-{%- if site.get('ssl', {'enabled': False}).enabled %}
+{%- if site.get('webdav', {}).get('enabled', False) %}
+{{ site.name }}_webdav_dir:
+  file.directory:
+  - name: {{ site.root }}
+  - user: {{ server.service_user }}
+  - group: {{ server.service_group }}
+  - makedirs: true
+{%- endif %}
+
+{%- for location in site.get('locations', []) %}
+{%- if location.get('webdav', {}).get('enabled', False) %}
+{{ site.name }}_webdav_{{ location.uri }}_dir:
+  file.directory:
+  - name: {{ location.path }}
+  - user: {{ server.service_user }}
+  - group: {{ server.service_group }}
+  - makedirs: true
+{%- endif %}
+{%- endfor %}
+
+{%- if site.get('ssl', {'enabled': False}).enabled and site.host.name not in ssl_certificates.keys() %}
+{%- set _dummy = ssl_certificates.update({site.host.name: []}) %}
 
 /etc/ssl/certs/{{ site.host.name }}.crt:
   file.managed:
@@ -43,7 +66,7 @@
   - require:
     - pkg: apache_packages
 
-/etc/ssl/certs/ca-chain.crt:
+/etc/ssl/certs/{{ site.host.name }}-ca-chain.crt:
   file.managed:
   {%- if site.ssl.chain is defined %}
   - contents_pillar: apache:server:site:{{ site_name }}:ssl:chain

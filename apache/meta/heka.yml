@@ -1,0 +1,113 @@
+{%- from "apache/map.jinja" import server with context %}
+
+{# Build a dict of Apache sites we are interested in #}
+{%- set apache_sites = {} %}
+{%- for site_name, site in server.get('site', {}).iteritems() if server.get('enabled', True) %}
+{%- if site.type == 'keystone' %}
+{%- do apache_sites.update({site_name: site}) %}
+{%- endif %}
+{%- endfor %}
+
+{%- if apache_sites|list|length > 0 %}
+log_collector:
+  decoder:
+{%- for site_name, site in apache_sites.iteritems() %}
+{%- if site.type == 'keystone' %}
+    keystone_wsgi:
+      engine: sandbox
+      module_file: /usr/share/lma_collector/decoders/keystone_wsgi_log.lua
+      module_dir: /usr/share/lma_collector/common;/usr/share/heka/lua_modules
+      config:
+        apache_log_pattern: >-
+          {{ site.get('log', {}).get('custom', {}).format|default('vhost_combined') }}
+{%- endif %}
+{%- endfor %}
+
+  input:
+{%- for site_name, site in apache_sites.iteritems() %}
+{%- if site.type == 'keystone' %}
+{%- set apache_log_file = site.get('log', {}).get('custom', {}).file|default(server.log_dir ~ '/' ~ site_name ~ '.access.log') %}
+    keystone_wsgi_log:
+      engine: logstreamer
+      log_directory: "{{ salt['file.dirname'](apache_log_file) }}"
+      file_match: '{{ salt['file.basename'](apache_log_file)|replace('.', '\.') }}\.?(?P<Seq>\d*)$'
+      differentiator: ['keystone-wsgi']
+      priority: ["^Seq"]
+      decoder: "keystone_wsgi_decoder"
+      splitter: "TokenSplitter"
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+
+{%- if server.get('enabled', False) %}
+metric_collector:
+  trigger:
+    apache_check:
+      description: 'Apache service cannot be checked'
+      severity: down
+      rules:
+      - metric: apache_check
+        relational_operator: '=='
+        threshold: 0
+        window: 60
+        periods: 0
+        function: last
+    apache_idle_workers:
+      description: 'There is no Apache idle workers available'
+      severity: warning
+      rules:
+      - metric: apache_idle_workers
+        relational_operator: '=='
+        threshold: 0
+        window: 60
+        periods: 0
+        function: min
+  alarm:
+    apache_check:
+      alerting: enabled
+      triggers:
+      - apache_check
+      dimension:
+        service: apache-check
+    apache_idle_workers:
+      alerting: enabled
+      triggers:
+      - apache_idle_workers
+      dimension:
+        service: apache-idle-workers
+aggregator:
+  alarm_cluster:
+    apache_check:
+      policy: availability_of_members
+      alerting: enabled
+      match:
+        service: apache-check
+      group_by: hostname
+      members:
+      - apache_check
+      dimension:
+        service: apache
+        nagios_host: 01-service-clusters
+    apache_idle_workers:
+      policy: availability_of_members
+      alerting: enabled
+      match:
+        service: apache-idle-workers
+      group_by: hostname
+      members:
+      - apache_idle_workers
+      dimension:
+        service: apache
+        nagios_host: 01-service-clusters
+    apache:
+      policy: highest_severity
+      alerting: enabled_with_notification
+      match:
+        service: apache
+      members:
+      - apache_check
+      - apache_idle_workers
+      dimension:
+        cluster_name: apache
+        nagios_host: 00-top-clusters
+{%- endif %}

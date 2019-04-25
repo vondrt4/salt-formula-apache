@@ -2,9 +2,9 @@ parameters:
   apache:
     _support:
       collectd:
-        enabled: false
+        enabled: true
       heka:
-        enabled: false
+        enabled: true
       sensu:
         enabled: true
         threshold_warn_base: ${apache:server:mpm:prefork:max_clients}
@@ -12,4 +12,8 @@ parameters:
         threshold_crit_base: ${apache:server:mpm:prefork:max_clients}
         threshold_crit_divisor: 10
       sphinx:
+        enabled: true
+      iptables:
+        enabled: true
+      grafana:
         enabled: true

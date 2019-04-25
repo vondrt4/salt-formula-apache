@@ -1,37 +1,11 @@
-======
-Apache
-======
+==============
+Apache Formula
+==============
 
 Install and configure Apache webserver
 
-Available states
-================
-
-.. contents::
-    :local:
-
-``apache.server``
---------------------
-
-Setup apache server
-
-Available metadata
-==================
-
-.. contents::
-    :local:
-
-``metadata.apache.server.single``
---------------------------
-
-Setup basic server
-
-Configuration parameters
-========================
-
-
-Example reclass
-===============
+Sample Pillars
+==============
 
 Simple Apache proxy
 
@@ -98,8 +72,79 @@ Tune settings of mpm_prefork
               max: 64
               max_requests: 4000
 
-Example pillar
-==============
+Apache kerberos authentication:
+
+.. code-block:: yaml
+
+    parameters
+      apache:
+        server:
+          site:
+            auth:
+             engine: kerberos
+             name: "Kerberos Authentication"
+             require:
+               - "ldap-attribute memberOf='cn=somegroup,cn=groups,cn=accounts,dc=example,dc=com'"
+
+             kerberos:
+               realms:
+                 - EXAMPLE.COM
+               # Bellow is optional
+               keytab: /etc/apache2/ipa.keytab
+               service: HTTP
+               method:
+                 negotiate: true
+                 k5passwd: true
+
+             ldap:
+               url: "ldaps://idm01.example.com/dc=example,dc=com?krbPrincipalName"
+               # mech is optional
+               mech: GSSAPI
+
+Tune security settings (these are default):
+
+.. code-block:: yaml
+
+    parameters:
+      apache:
+        server:
+          # ServerTokens
+          tokens: Prod
+          # ServerSignature, can be also set per-site
+          signature: false
+          # TraceEnable, can be also set per-site
+          trace: false
+          # Deny access to .git, .svn, .hg directories
+          secure_scm: true
+          # Required for settings bellow
+          modules:
+            - headers
+          # Set X-Content-Type-Options
+          content_type_options: nosniff
+          # Set X-Frame-Options
+          frame_options: sameorigin
+
+Tuned up log configuration.
+
+.. code-block:: yaml
+
+    parameters:
+      apache:
+        server:
+          site:
+            foo:
+              enabled: true
+              type: static
+              log:
+                custom:
+                  enabled: true
+                  file: /var/log/apache2/mylittleponysitecustom.log
+                  format: >-
+                     %{X-Forwarded-For}i %l %u %t \"%r\" %>s %b %D \"%{Referer}i\" \"%{User-Agent}i\"
+                error:
+                  enabled: false
+                  file: /var/log/apache2/foo.error.log
+                  level: notice
 
 Roundcube webmail, postfixadmin and mailman
 
@@ -110,6 +155,7 @@ Roundcube webmail, postfixadmin and mailman
     parameters:
       apache:
         server:
+          enabled: true
           modules:
             - cgi
             - php
@@ -137,7 +183,42 @@ Roundcube webmail, postfixadmin and mailman
                   - mail01.example.com
                   - mail01
 
-Read more
-=========
+
+More Information
+================
 
 * https://httpd.apache.org/docs/
+
+
+Documentation and Bugs
+======================
+
+To learn how to install and update salt-formulas, consult the documentation
+available online at:
+
+    http://salt-formulas.readthedocs.io/
+
+In the unfortunate event that bugs are discovered, they should be reported to
+the appropriate issue tracker. Use Github issue tracker for specific salt
+formula:
+
+    https://github.com/salt-formulas/salt-formula-apache/issues
+
+For feature requests, bug reports or blueprints affecting entire ecosystem,
+use Launchpad salt-formulas project:
+
+    https://launchpad.net/salt-formulas
+
+You can also join salt-formulas-users team and subscribe to mailing list:
+
+    https://launchpad.net/~salt-formulas-users
+
+Developers wishing to work on the salt-formulas projects should always base
+their work on master branch and submit pull request against specific formula.
+
+    https://github.com/salt-formulas/salt-formula-apache
+
+Any questions or feedback is always welcome so feel free to join our IRC
+channel:
+
+    #salt-formulas @ irc.freenode.net
